@@ -46,34 +46,43 @@ func main() {
 	// 设置检测超时时间
 	timeout := 3 * time.Second
 
-	// 遍历配置中的每个服务类型及其地址列表
-	for service, addresses := range cfg {
-		// 初始化结果记录
-		results[service] = ServiceResult{
-			Success: []string{},
-			Failure: []string{},
+	// ── Redis（支持密码认证）──────────────────────────────────────────────
+	redisAddrs := cfg.Redis.Addresses
+	if len(redisAddrs) > 0 && !(len(redisAddrs) == 1 && redisAddrs[0] == "") {
+		result := ServiceResult{Success: []string{}, Failure: []string{}}
+		for _, addr := range redisAddrs {
+			err := checker.CheckRedisConnection(addr, cfg.Redis.Password, timeout)
+			if err != nil {
+				failureLogger.Printf("[redis] 连接 %s 失败: %v", addr, err)
+				result.Failure = append(result.Failure, addr)
+			} else {
+				successLogger.Printf("[redis] 连接 %s 成功", addr)
+				result.Success = append(result.Success, addr)
+			}
 		}
+		results["redis"] = result
+	}
 
+	// ── 其他服务（TCP 连接检测）──────────────────────────────────────────
+	for service, addresses := range cfg.Services {
 		// 跳过空列表（或只有空字符串的列表）
 		if len(addresses) == 0 || (len(addresses) == 1 && addresses[0] == "") {
+			results[service] = ServiceResult{Success: []string{}, Failure: []string{}}
 			continue
 		}
 
+		result := ServiceResult{Success: []string{}, Failure: []string{}}
 		for _, addr := range addresses {
-			// 检测连接
 			err := checker.CheckConnection(addr, timeout)
 			if err != nil {
 				failureLogger.Printf("[%s] 连接 %s 失败: %v", service, addr, err)
-				tmp := results[service]
-				tmp.Failure = append(tmp.Failure, addr)
-				results[service] = tmp
+				result.Failure = append(result.Failure, addr)
 			} else {
 				successLogger.Printf("[%s] 连接 %s 成功", service, addr)
-				tmp := results[service]
-				tmp.Success = append(tmp.Success, addr)
-				results[service] = tmp
+				result.Success = append(result.Success, addr)
 			}
 		}
+		results[service] = result
 	}
 
 	// 使用 report.tpl 模板生成检测报告

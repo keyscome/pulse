@@ -9,7 +9,9 @@ nacos:
   - localhost:8848
 
 redis:
-  - localhost:6379
+  password: ""
+  addresses:
+    - localhost:6379
 
 zookeeper:
   - localhost:2181
