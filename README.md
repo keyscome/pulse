@@ -119,6 +119,59 @@ logs/
     └── report.log    # full formatted report
 ```
 
+## Local Simulation Environment
+
+The `docker/` directory contains a **Docker Compose** setup that starts all the
+services Pulse monitors, so you can try the tool against a real local stack
+without an external cluster.
+
+### Services started
+
+| Service | Image | Exposed port(s) |
+|---------|-------|-----------------|
+| nacos | `nacos/nacos-server:v2.3.2` | 8848 (HTTP), 9848 (gRPC) |
+| redis | `redis:7-alpine` | 6379 |
+| zookeeper | `bitnami/zookeeper:3.9` | 2181 |
+| zk-ui | `elkozmon/zoonavigator:latest` | 9090 |
+| kafka | `bitnami/kafka:3.7` | 9092 |
+| elasticsearch | `elasticsearch:7.17.21` | 9200 (HTTP), 9300 (transport) |
+| kibana | `kibana:7.17.21` | 5601 |
+| minio | `minio/minio:RELEASE.2024-04-06T05-26-02Z` | 9000 (S3 API), 9001 (console) |
+
+### Quick start
+
+```bash
+# 1. Start all services
+cd docker
+docker compose up -d
+
+# 2. Wait for services to become healthy (typically 60-90 seconds)
+docker compose ps
+
+# 3. Run Pulse against the local stack
+cd ..
+cp docker/config.yml config.yml
+./pulse
+```
+
+### Web UIs
+
+| UI | URL | Default credentials |
+|----|-----|---------------------|
+| Nacos | <http://localhost:8848/nacos> | nacos / nacos |
+| MinIO console | <http://localhost:9001> | minioadmin / minioadmin |
+| Kibana | <http://localhost:5601> | — |
+| ZooKeeper Navigator | <http://localhost:9090> | — |
+
+### Tear down
+
+```bash
+cd docker
+docker compose down
+```
+
+---
+
 ## Building from Source
 
 Clone the repository and build with the standard Go toolchain:
