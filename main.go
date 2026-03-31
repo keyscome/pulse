@@ -46,8 +46,24 @@ func main() {
 	// 设置检测超时时间
 	timeout := 3 * time.Second
 
-	// 遍历配置中的每个服务类型及其地址列表
-	for service, addresses := range cfg {
+	// 检测 Elasticsearch 集群（HTTP API + 可选 Basic Auth）
+	if cfg.Elasticsearch != nil {
+		esResult := ServiceResult{Success: []string{}, Failure: []string{}}
+		for _, addr := range cfg.Elasticsearch.Addresses {
+			err := checker.CheckElasticsearch(addr, cfg.Elasticsearch.Username, cfg.Elasticsearch.Password, timeout)
+			if err != nil {
+				failureLogger.Printf("[elasticsearch] 连接 %s 失败: %v", addr, err)
+				esResult.Failure = append(esResult.Failure, addr)
+			} else {
+				successLogger.Printf("[elasticsearch] 连接 %s 成功", addr)
+				esResult.Success = append(esResult.Success, addr)
+			}
+		}
+		results["elasticsearch"] = esResult
+	}
+
+	// 遍历配置中的每个 TCP 服务类型及其地址列表
+	for service, addresses := range cfg.Network {
 		// 初始化结果记录
 		results[service] = ServiceResult{
 			Success: []string{},
@@ -60,7 +76,7 @@ func main() {
 		}
 
 		for _, addr := range addresses {
-			// 检测连接
+			// 检测 TCP 连接
 			err := checker.CheckConnection(addr, timeout)
 			if err != nil {
 				failureLogger.Printf("[%s] 连接 %s 失败: %v", service, addr, err)

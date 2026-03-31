@@ -21,7 +21,10 @@ kafka:
   - localhost:9092
 
 elasticsearch:
-  - localhost:9300
+  addresses:
+    - localhost:9200
+  username: elastic
+  password: changeme
 
 kibana:
   - localhost:5601

@@ -47,7 +47,9 @@ The script downloads the latest release, extracts it to `/usr/local/pulse`, and 
 
 ## Configuration
 
-Pulse reads a `config.yml` file from the **current working directory**. Each top-level key is a service name, and its value is a list of `host:port` addresses to check.
+Pulse reads a `config.yml` file from the **current working directory**. Each top-level key is a service name.
+
+**Standard services** use a list of `host:port` addresses for TCP connectivity checks:
 
 ```yaml
 # config.yml – example
@@ -60,8 +62,6 @@ redis:
   - 10.0.1.38:6380
 kafka:
   - 10.0.1.30:9092
-elasticsearch:
-  - 10.0.1.24:9300
 kibana:
   - 10.0.1.26:5601
 minio:
@@ -70,7 +70,21 @@ zookeeper:
   - 10.0.1.27:3000
 ```
 
-Add or remove services as needed — any service name is accepted.
+**Elasticsearch** uses a dedicated structured section that connects via the HTTP API (`/_cluster/health`) and supports Basic Auth password authentication:
+
+```yaml
+elasticsearch:
+  addresses:
+    - 10.0.1.24:9200
+    - 10.0.1.25:9200
+    - 10.0.1.26:9200
+  username: elastic
+  password: changeme
+```
+
+> **Note:** `username` and `password` are optional. Omit them (or leave them empty) for clusters with security disabled.
+
+Add or remove standard services as needed — any service name is accepted.
 
 ## Usage
 
@@ -160,7 +174,7 @@ cp docker/config.yml config.yml
 |----|-----|---------------------|
 | Nacos | <http://localhost:8848/nacos> | nacos / nacos |
 | MinIO console | <http://localhost:9001> | minioadmin / minioadmin |
-| Kibana | <http://localhost:5601> | — |
+| Kibana | <http://localhost:5601> | elastic / changeme |
 | ZooKeeper Navigator | <http://localhost:9090> | — |
 
 ### Tear down
@@ -197,7 +211,7 @@ Use the provided build scripts in the `build/` directory, or set the environment
 ```
 pulse/
 ├── build/          # Platform-specific build scripts
-├── checker/        # TCP connection checker package
+├── checker/        # TCP and Elasticsearch connection checker package
 ├── config/         # YAML configuration loader package
 ├── logger/         # Structured logger (success / failure / report)
 ├── scripts/        # Installation script
