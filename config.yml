@@ -18,7 +18,10 @@ elasticsearch:
   - 10.0.1.25:9300
   - 10.0.1.26:9300
 kibana:
-  - 10.0.1.26:5601
+  addresses:
+    - 10.0.1.26:5601
+  username: elastic
+  password: changeme
 minio:
   - 10.0.1.35:9000
 zookeeper:

@@ -24,7 +24,10 @@ elasticsearch:
   - localhost:9300
 
 kibana:
-  - localhost:5601
+  addresses:
+    - localhost:5601
+  username: elastic
+  password: changeme
 
 minio:
   - localhost:9000
