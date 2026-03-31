@@ -1,0 +1,163 @@
+# docker-compose.yml — Pulse local simulation environment
+#
+# Starts all the services that Pulse monitors so you can run the tool
+# against a real local stack without an external cluster.
+#
+# Usage:
+#   cd docker
+#   docker compose up -d
+#
+# Then run Pulse from the repo root with the bundled local config:
+#   cp config.yml ../config.yml && cd .. && ./pulse
+#
+# Default credentials
+#   MinIO console  http://localhost:9001  minioadmin / minioadmin
+#   Nacos console  http://localhost:8848/nacos  nacos / nacos
+#   Kibana         http://localhost:5601
+#   ZK Navigator   http://localhost:9090
+
+version: "3.9"
+
+services:
+
+  # ── Nacos (service discovery & configuration centre) ────────────────────────
+  nacos:
+    image: nacos/nacos-server:v2.3.2
+    container_name: pulse-nacos
+    environment:
+      MODE: standalone
+      JVM_XMS: 256m
+      JVM_XMX: 256m
+      JVM_XMN: 128m
+      NACOS_AUTH_ENABLE: "false"
+    ports:
+      - "8848:8848"   # HTTP console & client API
+      - "9848:9848"   # gRPC client port
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8848/nacos/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Redis ─────────────────────────────────────────────────────────────────
+  redis:
+    image: redis:7-alpine
+    container_name: pulse-redis
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+    restart: unless-stopped
+
+  # ── ZooKeeper ─────────────────────────────────────────────────────────────
+  zookeeper:
+    image: bitnami/zookeeper:3.9
+    container_name: pulse-zookeeper
+    environment:
+      ALLOW_ANONYMOUS_LOGIN: "yes"
+    ports:
+      - "2181:2181"   # client port
+    healthcheck:
+      test: ["CMD-SHELL", "echo ruok | nc -w 2 localhost 2181 | grep -q imok"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  # ── ZooKeeper Navigator UI ─────────────────────────────────────────────────
+  zk-ui:
+    image: elkozmon/zoonavigator:latest
+    container_name: pulse-zk-ui
+    environment:
+      HTTP_PORT: "9090"
+      # pre-configure a connection so you can open the UI without typing the address
+      AUTO_CONNECT_CONNECTION_STRING: "zookeeper:2181"
+    ports:
+      - "9090:9090"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    restart: unless-stopped
+
+  # ── Kafka ─────────────────────────────────────────────────────────────────
+  kafka:
+    image: bitnami/kafka:3.7
+    container_name: pulse-kafka
+    environment:
+      KAFKA_CFG_ZOOKEEPER_CONNECT: "zookeeper:2181"
+      KAFKA_CFG_LISTENERS: "PLAINTEXT://:9092"
+      KAFKA_CFG_ADVERTISED_LISTENERS: "PLAINTEXT://localhost:9092"
+      ALLOW_PLAINTEXT_LISTENER: "yes"
+    ports:
+      - "9092:9092"
+    depends_on:
+      zookeeper:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "kafka-topics.sh --bootstrap-server localhost:9092 --list"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Elasticsearch ─────────────────────────────────────────────────────────
+  elasticsearch:
+    image: elasticsearch:7.17.21
+    container_name: pulse-elasticsearch
+    environment:
+      discovery.type: single-node
+      ES_JAVA_OPTS: "-Xms256m -Xmx256m"
+      xpack.security.enabled: "false"
+    ports:
+      - "9200:9200"   # HTTP API
+      - "9300:9300"   # transport (inter-node / monitored by Pulse)
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9200/_cluster/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ── Kibana ────────────────────────────────────────────────────────────────
+  kibana:
+    image: kibana:7.17.21
+    container_name: pulse-kibana
+    environment:
+      ELASTICSEARCH_HOSTS: "http://elasticsearch:9200"
+    ports:
+      - "5601:5601"
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:5601/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    restart: unless-stopped
+
+  # ── MinIO (S3-compatible object storage) ───────────────────────────────────
+  minio:
+    image: minio/minio:RELEASE.2024-04-06T05-26-02Z
+    container_name: pulse-minio
+    command: server /data --console-address ":9001"
+    environment:
+      MINIO_ROOT_USER: minioadmin
+      MINIO_ROOT_PASSWORD: minioadmin
+    ports:
+      - "9000:9000"   # S3 API (monitored by Pulse)
+      - "9001:9001"   # web console
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+networks:
+  default:
+    name: pulse-sim

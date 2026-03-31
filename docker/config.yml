@@ -1,0 +1,30 @@
+# Pulse config — local docker-compose simulation environment
+#
+# Run `docker compose up -d` in the docker/ directory first, then copy
+# this file to the repo root as config.yml and execute ./pulse.
+#
+# All addresses resolve to localhost via the ports exposed by docker-compose.
+
+nacos:
+  - localhost:8848
+
+redis:
+  - localhost:6379
+
+zookeeper:
+  - localhost:2181
+
+zk-ui:
+  - localhost:9090
+
+kafka:
+  - localhost:9092
+
+elasticsearch:
+  - localhost:9300
+
+kibana:
+  - localhost:5601
+
+minio:
+  - localhost:9000
