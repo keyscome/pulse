@@ -95,6 +95,15 @@ func main() {
 		}
 	}
 
+	// 检测 Kibana（HTTP 基础认证）
+	if len(cfg.Kibana.Addresses) > 0 {
+		results["kibana"] = ServiceResult{Success: []string{}, Failure: []string{}}
+		for _, addr := range cfg.Kibana.Addresses {
+			err := checker.CheckKibanaConnection(addr, cfg.Kibana.Username, cfg.Kibana.Password, timeout)
+			recordResult(results, "kibana", addr, err, successLogger, failureLogger)
+		}
+	}
+
 	// 使用 report.tpl 模板生成检测报告
 	reportTpl, err := template.ParseFiles("report.tpl")
 	if err != nil {
