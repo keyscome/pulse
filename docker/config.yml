@@ -6,7 +6,10 @@
 # All addresses resolve to localhost via the ports exposed by docker-compose.
 
 nacos:
-  - localhost:8848
+  addresses:
+    - localhost:8848
+  username: nacos
+  password: nacos
 
 redis:
   - localhost:6379

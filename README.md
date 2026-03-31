@@ -47,14 +47,16 @@ The script downloads the latest release, extracts it to `/usr/local/pulse`, and 
 
 ## Configuration
 
-Pulse reads a `config.yml` file from the **current working directory**. Each top-level key is a service name, and its value is a list of `host:port` addresses to check.
+Pulse reads a `config.yml` file from the **current working directory**.
+
+### Generic TCP services
+
+Each top-level key (other than `nacos`) is a service name, and its value is a list of `host:port` addresses to check via TCP.
 
 ```yaml
 # config.yml – example
 web:
   - 10.0.31.131:30310
-nacos:
-  - 10.0.31.131:30848
 redis:
   - 10.0.1.38:6379
   - 10.0.1.38:6380
@@ -70,7 +72,24 @@ zookeeper:
   - 10.0.1.27:3000
 ```
 
-Add or remove services as needed — any service name is accepted.
+### Nacos cluster (with authentication)
+
+The `nacos` key uses a structured format that supports a **cluster** of nodes and
+**username / password** credentials. Pulse connects to each node using the Nacos HTTP
+login API (`POST /nacos/v1/auth/login`) so that both network reachability *and*
+authentication are verified.
+
+```yaml
+nacos:
+  addresses:
+    - 10.0.31.131:8848
+    - 10.0.31.132:8848
+    - 10.0.31.133:8848
+  username: nacos
+  password: nacos
+```
+
+Add or remove services as needed — any service name (except `nacos`) is accepted for generic TCP checks.
 
 ## Usage
 
@@ -200,6 +219,7 @@ pulse/
 ├── checker/        # TCP connection checker package
 ├── config/         # YAML configuration loader package
 ├── logger/         # Structured logger (success / failure / report)
+├── nacos/          # Nacos cluster HTTP authentication checker package
 ├── scripts/        # Installation script
 ├── config.yml      # Example service configuration
 ├── go.mod          # Go module definition

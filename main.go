@@ -11,6 +11,7 @@ import (
 	"github.com/keyscome/pulse/checker"
 	"github.com/keyscome/pulse/config"
 	"github.com/keyscome/pulse/logger"
+	"github.com/keyscome/pulse/nacos"
 )
 
 // ReportData 用于模板渲染，记录每个服务检测的成功和失败结果
@@ -46,8 +47,8 @@ func main() {
 	// 设置检测超时时间
 	timeout := 3 * time.Second
 
-	// 遍历配置中的每个服务类型及其地址列表
-	for service, addresses := range cfg {
+	// 遍历配置中的每个服务类型及其地址列表（通用 TCP 检测）
+	for service, addresses := range cfg.Network {
 		// 初始化结果记录
 		results[service] = ServiceResult{
 			Success: []string{},
@@ -72,6 +73,28 @@ func main() {
 				tmp := results[service]
 				tmp.Success = append(tmp.Success, addr)
 				results[service] = tmp
+			}
+		}
+	}
+
+	// 对 Nacos 集群执行 HTTP 认证检测
+	if cfg.Nacos != nil && len(cfg.Nacos.Addresses) > 0 {
+		results["nacos"] = ServiceResult{
+			Success: []string{},
+			Failure: []string{},
+		}
+		for _, addr := range cfg.Nacos.Addresses {
+			err := nacos.CheckAuth(addr, cfg.Nacos.Username, cfg.Nacos.Password, timeout)
+			if err != nil {
+				failureLogger.Printf("[nacos] 连接 %s 失败: %v", addr, err)
+				tmp := results["nacos"]
+				tmp.Failure = append(tmp.Failure, addr)
+				results["nacos"] = tmp
+			} else {
+				successLogger.Printf("[nacos] 连接 %s 成功", addr)
+				tmp := results["nacos"]
+				tmp.Success = append(tmp.Success, addr)
+				results["nacos"] = tmp
 			}
 		}
 	}
