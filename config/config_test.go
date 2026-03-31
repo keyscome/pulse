@@ -26,8 +26,9 @@ redis:
   addresses:
     - 127.0.0.1:6379
     - 127.0.0.1:6380
-nacos:
-  - 127.0.0.1:8848
+services:
+  nacos:
+    - 127.0.0.1:8848
 `
 	path := writeTemp(t, yml)
 	cfg, err := LoadConfig(path)
@@ -56,6 +57,7 @@ func TestLoadConfig_RedisNoPassword(t *testing.T) {
 redis:
   addresses:
     - 127.0.0.1:6379
+services: {}
 `
 	path := writeTemp(t, yml)
 	cfg, err := LoadConfig(path)
