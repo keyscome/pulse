@@ -25,6 +25,21 @@ type ServiceResult struct {
 	Failure []string
 }
 
+// recordResult 根据检测结果将地址记录到对应服务的成功或失败列表中，并写入日志
+func recordResult(results map[string]ServiceResult, service, addr string, err error, successLogger, failureLogger interface {
+	Printf(string, ...interface{})
+}) {
+	tmp := results[service]
+	if err != nil {
+		failureLogger.Printf("[%s] 连接 %s 失败: %v", service, addr, err)
+		tmp.Failure = append(tmp.Failure, addr)
+	} else {
+		successLogger.Printf("[%s] 连接 %s 成功", service, addr)
+		tmp.Success = append(tmp.Success, addr)
+	}
+	results[service] = tmp
+}
+
 func main() {
 	// 初始化日志记录器
 	successLogger, failureLogger, reportLogger, cleanup, err := logger.NewLoggers()
@@ -46,13 +61,9 @@ func main() {
 	// 设置检测超时时间
 	timeout := 3 * time.Second
 
-	// 遍历配置中的每个服务类型及其地址列表（TCP 检测）
+	// 遍历配置中的每个服务类型及其地址列表（TCP 连接检测）
 	for service, addresses := range cfg.Services {
-		// 初始化结果记录
-		results[service] = ServiceResult{
-			Success: []string{},
-			Failure: []string{},
-		}
+		results[service] = ServiceResult{Success: []string{}, Failure: []string{}}
 
 		// 跳过空列表（或只有空字符串的列表）
 		if len(addresses) == 0 || (len(addresses) == 1 && addresses[0] == "") {
@@ -61,23 +72,35 @@ func main() {
 
 		for _, addr := range addresses {
 			// 检测连接：zookeeper 使用专用检测器（ruok/imok 四字命令），其余服务使用 TCP 检测
-			var err error
+			var connErr error
 			if service == "zookeeper" {
-				err = checker.CheckZookeeperConnection(addr, timeout)
+				connErr = checker.CheckZookeeperConnection(addr, timeout)
 			} else {
-				err = checker.CheckConnection(addr, timeout)
+				connErr = checker.CheckConnection(addr, timeout)
 			}
-			if err != nil {
-				failureLogger.Printf("[%s] 连接 %s 失败: %v", service, addr, err)
-				tmp := results[service]
-				tmp.Failure = append(tmp.Failure, addr)
-				results[service] = tmp
-			} else {
-				successLogger.Printf("[%s] 连接 %s 成功", service, addr)
-				tmp := results[service]
-				tmp.Success = append(tmp.Success, addr)
-				results[service] = tmp
+			recordResult(results, service, addr, connErr, successLogger, failureLogger)
+		}
+	}
+
+	// MinIO 认证连接检测
+	if cfg.Minio != nil {
+		results["minio"] = ServiceResult{Success: []string{}, Failure: []string{}}
+
+		for _, addr := range cfg.Minio.Addresses {
+			if addr == "" {
+				continue
 			}
+			err := checker.CheckMinioConnection(addr, cfg.Minio.Username, cfg.Minio.Password, cfg.Minio.UseSSL, timeout)
+			recordResult(results, "minio", addr, err, successLogger, failureLogger)
+		}
+	}
+
+	// 检测 Kibana（HTTP 基础认证）
+	if len(cfg.Kibana.Addresses) > 0 {
+		results["kibana"] = ServiceResult{Success: []string{}, Failure: []string{}}
+		for _, addr := range cfg.Kibana.Addresses {
+			err := checker.CheckKibanaConnection(addr, cfg.Kibana.Username, cfg.Kibana.Password, timeout)
+			recordResult(results, "kibana", addr, err, successLogger, failureLogger)
 		}
 	}
 
