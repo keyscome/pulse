@@ -48,9 +48,12 @@ The script downloads the latest release, extracts it to `/usr/local/pulse`, and 
 
 ## Configuration
 
-Pulse reads a `config.yml` file from the **current working directory**. The file has two sections:
+Pulse reads a `config.yml` file from the **current working directory**. The file has the following sections:
 
 - **`services`** — a map of service names to lists of `host:port` addresses for TCP connectivity checks
+- **`elasticsearch`** — Elasticsearch-specific configuration with credentials for authenticated HTTP health checks
+- **`kibana`** — Kibana-specific configuration with credentials for authenticated HTTP status checks
+- **`redis`** — Redis-specific configuration with optional password for protocol-level checks
 - **`minio`** — MinIO-specific configuration with credentials and addresses for authenticated connection checks
 
 ```yaml
@@ -60,17 +63,32 @@ services:
     - 10.0.31.131:30310
   nacos:
     - 10.0.31.131:30848
-  redis:
-    - 10.0.1.38:6379
-    - 10.0.1.38:6380
   kafka:
     - 10.0.1.30:9092
-  elasticsearch:
-    - 10.0.1.24:9300
-  kibana:
-    - 10.0.1.26:5601
   zookeeper:
-    - 10.0.1.27:3000
+    - 10.0.1.27:2181,10.0.1.28:2181,10.0.1.29:2181
+  zk-ui:
+    - 10.0.1.27:9090
+
+elasticsearch:
+  addresses:
+    - 10.0.1.24:9200
+    - 10.0.1.25:9200
+    - 10.0.1.26:9200
+  username: elastic
+  password: changeme
+
+kibana:
+  addresses:
+    - 10.0.1.26:5601
+  username: elastic
+  password: changeme
+
+redis:
+  password: ""
+  addresses:
+    - 10.0.1.38:6379
+    - 10.0.1.38:6380
 
 minio:
   username: minioadmin
@@ -79,7 +97,9 @@ minio:
     - 10.0.1.35:9000
 ```
 
-Add or remove services under `services` as needed — any service name is accepted. The `minio` section is optional; omit it if you do not need MinIO checks.
+**Elasticsearch** connects via the HTTP API (`/_cluster/health`) and supports Basic Auth. `username` and `password` are optional — omit them for clusters with security disabled.
+
+Add or remove services under `services` as needed — any service name is accepted. The `elasticsearch`, `kibana`, `redis`, and `minio` sections are optional; omit them if not needed.
 
 ## Usage
 
@@ -93,9 +113,10 @@ Pulse will:
 
 1. Load `config.yml`.
 2. Attempt a TCP connection to every address under `services` (3-second timeout per address).
-3. Attempt an authenticated connection to every MinIO address using the provided `username` and `password`.
-4. Print a report to standard output.
-5. Write detailed logs to `logs/<timestamp>/`.
+3. Check the Elasticsearch cluster health via HTTP API using optional Basic Auth credentials.
+4. Attempt an authenticated connection to every MinIO address using the provided `username` and `password`.
+5. Print a report to standard output.
+6. Write detailed logs to `logs/<timestamp>/`.
 
 ### Example output
 
@@ -170,7 +191,7 @@ cp docker/config.yml config.yml
 |----|-----|---------------------|
 | Nacos | <http://localhost:8848/nacos> | nacos / nacos |
 | MinIO console | <http://localhost:9001> | minioadmin / minioadmin |
-| Kibana | <http://localhost:5601> | — |
+| Kibana | <http://localhost:5601> | elastic / changeme |
 | ZooKeeper Navigator | <http://localhost:9090> | — |
 
 ### Tear down
@@ -207,7 +228,7 @@ Use the provided build scripts in the `build/` directory, or set the environment
 ```
 pulse/
 ├── build/          # Platform-specific build scripts
-├── checker/        # TCP connection checker package
+├── checker/        # TCP and Elasticsearch connection checker package
 ├── config/         # YAML configuration loader package
 ├── logger/         # Structured logger (success / failure / report)
 ├── scripts/        # Installation script

@@ -7,10 +7,6 @@ services:
     - 10.0.1.30:9092
     - 10.0.1.31:9092
     - 10.0.1.32:9092
-  elasticsearch:
-    - 10.0.1.24:9300
-    - 10.0.1.25:9300
-    - 10.0.1.26:9300
   zookeeper:
     - 10.0.1.27:2181,10.0.1.28:2181,10.0.1.29:2181
   zk-ui:
@@ -26,6 +22,14 @@ redis:
     - 10.0.1.40:6379
     - 10.0.1.40:6380
 
+elasticsearch:
+  addresses:
+    - 10.0.1.24:9200
+    - 10.0.1.25:9200
+    - 10.0.1.26:9200
+  username: elastic
+  password: changeme
+
 kibana:
   addresses:
     - 10.0.1.26:5601
@@ -37,4 +41,3 @@ minio:
   password: minioadmin
   addresses:
     - 10.0.1.35:9000
-

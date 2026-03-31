@@ -18,13 +18,16 @@ services:
   kafka:
     - localhost:9092
 
-  elasticsearch:
-    - localhost:9300
-
 redis:
   password: ""
   addresses:
     - localhost:6379
+
+elasticsearch:
+  addresses:
+    - localhost:9200
+  username: elastic
+  password: changeme
 
 kibana:
   addresses:

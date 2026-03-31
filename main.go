@@ -74,7 +74,7 @@ func main() {
 		}
 	}
 
-	// ── 通用 TCP 服务检测（zookeeper 使用专用检测器）────────────────────
+	// ── 通用 TCP 服务检测（zookeeper/kafka 使用专用检测器）───────────────
 	for service, addresses := range cfg.Services {
 		results[service] = ServiceResult{Success: []string{}, Failure: []string{}}
 
@@ -95,6 +95,15 @@ func main() {
 				connErr = checker.CheckConnection(addr, timeout)
 			}
 			recordResult(results, service, addr, connErr, successLogger, failureLogger)
+		}
+	}
+
+	// ── Elasticsearch 集群（HTTP API + 可选 Basic Auth）──────────────────
+	if cfg.Elasticsearch != nil {
+		results["elasticsearch"] = ServiceResult{Success: []string{}, Failure: []string{}}
+		for _, addr := range cfg.Elasticsearch.Addresses {
+			err := checker.CheckElasticsearch(addr, cfg.Elasticsearch.Username, cfg.Elasticsearch.Password, timeout)
+			recordResult(results, "elasticsearch", addr, err, successLogger, failureLogger)
 		}
 	}
 
