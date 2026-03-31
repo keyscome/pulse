@@ -5,6 +5,7 @@ A lightweight, cross-platform CLI tool for monitoring network service connectivi
 ## Features
 
 - **TCP connectivity checks** — verifies reachability of any TCP endpoint within a configurable timeout
+- **MinIO authenticated checks** — connects to MinIO with username/password credentials using the MinIO Go SDK
 - **YAML-based configuration** — define services and their addresses in a simple `config.yml` file
 - **Structured logging** — separate log files for successes, failures, and the full report, written to a timestamped directory under `logs/`
 - **Templated reports** — customisable report format via `report.tpl` (Go `text/template`)
@@ -47,30 +48,38 @@ The script downloads the latest release, extracts it to `/usr/local/pulse`, and 
 
 ## Configuration
 
-Pulse reads a `config.yml` file from the **current working directory**. Each top-level key is a service name, and its value is a list of `host:port` addresses to check.
+Pulse reads a `config.yml` file from the **current working directory**. The file has two sections:
+
+- **`services`** — a map of service names to lists of `host:port` addresses for TCP connectivity checks
+- **`minio`** — MinIO-specific configuration with credentials and addresses for authenticated connection checks
 
 ```yaml
 # config.yml – example
-web:
-  - 10.0.31.131:30310
-nacos:
-  - 10.0.31.131:30848
-redis:
-  - 10.0.1.38:6379
-  - 10.0.1.38:6380
-kafka:
-  - 10.0.1.30:9092
-elasticsearch:
-  - 10.0.1.24:9300
-kibana:
-  - 10.0.1.26:5601
+services:
+  web:
+    - 10.0.31.131:30310
+  nacos:
+    - 10.0.31.131:30848
+  redis:
+    - 10.0.1.38:6379
+    - 10.0.1.38:6380
+  kafka:
+    - 10.0.1.30:9092
+  elasticsearch:
+    - 10.0.1.24:9300
+  kibana:
+    - 10.0.1.26:5601
+  zookeeper:
+    - 10.0.1.27:3000
+
 minio:
-  - 10.0.1.35:9000
-zookeeper:
-  - 10.0.1.27:3000
+  username: minioadmin
+  password: minioadmin
+  addresses:
+    - 10.0.1.35:9000
 ```
 
-Add or remove services as needed — any service name is accepted.
+Add or remove services under `services` as needed — any service name is accepted. The `minio` section is optional; omit it if you do not need MinIO checks.
 
 ## Usage
 
@@ -83,9 +92,10 @@ Run Pulse from the directory that contains `config.yml` and `report.tpl`:
 Pulse will:
 
 1. Load `config.yml`.
-2. Attempt a TCP connection to every address (3-second timeout per address).
-3. Print a report to standard output.
-4. Write detailed logs to `logs/<timestamp>/`.
+2. Attempt a TCP connection to every address under `services` (3-second timeout per address).
+3. Attempt an authenticated connection to every MinIO address using the provided `username` and `password`.
+4. Print a report to standard output.
+5. Write detailed logs to `logs/<timestamp>/`.
 
 ### Example output
 
