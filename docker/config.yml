@@ -5,6 +5,16 @@
 #
 # All addresses resolve to localhost via the ports exposed by docker-compose.
 
+services:
+  zookeeper:
+    - localhost:2181
+
+  zk-ui:
+    - localhost:9090
+
+  kafka:
+    - localhost:9092
+
 nacos:
   addresses:
     - localhost:8848
@@ -12,22 +22,24 @@ nacos:
   password: nacos
 
 redis:
-  - localhost:6379
-
-zookeeper:
-  - localhost:2181
-
-zk-ui:
-  - localhost:9090
-
-kafka:
-  - localhost:9092
+  password: ""
+  addresses:
+    - localhost:6379
 
 elasticsearch:
-  - localhost:9300
+  addresses:
+    - localhost:9200
+  username: elastic
+  password: changeme
 
 kibana:
-  - localhost:5601
+  addresses:
+    - localhost:5601
+  username: elastic
+  password: changeme
 
 minio:
-  - localhost:9000
+  username: minioadmin
+  password: minioadmin
+  addresses:
+    - localhost:9000
