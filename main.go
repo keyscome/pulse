@@ -46,8 +46,8 @@ func main() {
 	// 设置检测超时时间
 	timeout := 3 * time.Second
 
-	// 遍历配置中的每个服务类型及其地址列表
-	for service, addresses := range cfg {
+	// 遍历配置中的每个服务类型及其地址列表（TCP 检测）
+	for service, addresses := range cfg.Services {
 		// 初始化结果记录
 		results[service] = ServiceResult{
 			Success: []string{},
@@ -77,6 +77,28 @@ func main() {
 				tmp := results[service]
 				tmp.Success = append(tmp.Success, addr)
 				results[service] = tmp
+			}
+		}
+	}
+
+	// 检测 Kibana（HTTP 基础认证）
+	if len(cfg.Kibana.Addresses) > 0 {
+		results["kibana"] = ServiceResult{
+			Success: []string{},
+			Failure: []string{},
+		}
+		for _, addr := range cfg.Kibana.Addresses {
+			err := checker.CheckKibanaConnection(addr, cfg.Kibana.Username, cfg.Kibana.Password, timeout)
+			if err != nil {
+				failureLogger.Printf("[kibana] 连接 %s 失败: %v", addr, err)
+				tmp := results["kibana"]
+				tmp.Failure = append(tmp.Failure, addr)
+				results["kibana"] = tmp
+			} else {
+				successLogger.Printf("[kibana] 连接 %s 成功", addr)
+				tmp := results["kibana"]
+				tmp.Success = append(tmp.Success, addr)
+				results["kibana"] = tmp
 			}
 		}
 	}
