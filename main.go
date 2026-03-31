@@ -71,7 +71,14 @@ func main() {
 		}
 
 		for _, addr := range addresses {
-			recordResult(results, service, addr, checker.CheckConnection(addr, timeout), successLogger, failureLogger)
+			// 检测连接：zookeeper 使用专用检测器（ruok/imok 四字命令），其余服务使用 TCP 检测
+			var connErr error
+			if service == "zookeeper" {
+				connErr = checker.CheckZookeeperConnection(addr, timeout)
+			} else {
+				connErr = checker.CheckConnection(addr, timeout)
+			}
+			recordResult(results, service, addr, connErr, successLogger, failureLogger)
 		}
 	}
 
