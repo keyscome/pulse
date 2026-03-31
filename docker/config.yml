@@ -5,26 +5,30 @@
 #
 # All addresses resolve to localhost via the ports exposed by docker-compose.
 
-nacos:
-  - localhost:8848
+services:
+  nacos:
+    - localhost:8848
 
-redis:
-  - localhost:6379
+  redis:
+    - localhost:6379
 
-zookeeper:
-  - localhost:2181
+  zookeeper:
+    - localhost:2181
 
-zk-ui:
-  - localhost:9090
+  zk-ui:
+    - localhost:9090
 
-kafka:
-  - localhost:9092
+  kafka:
+    - localhost:9092
 
-elasticsearch:
-  - localhost:9300
+  elasticsearch:
+    - localhost:9300
 
-kibana:
-  - localhost:5601
+  kibana:
+    - localhost:5601
 
 minio:
-  - localhost:9000
+  username: minioadmin
+  password: minioadmin
+  addresses:
+    - localhost:9000
