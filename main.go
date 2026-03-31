@@ -60,8 +60,13 @@ func main() {
 		}
 
 		for _, addr := range addresses {
-			// 检测连接
-			err := checker.CheckConnection(addr, timeout)
+			// 检测连接：zookeeper 使用专用检测器（ruok/imok 四字命令），其余服务使用 TCP 检测
+			var err error
+			if service == "zookeeper" {
+				err = checker.CheckZookeeperConnection(addr, timeout)
+			} else {
+				err = checker.CheckConnection(addr, timeout)
+			}
 			if err != nil {
 				failureLogger.Printf("[%s] 连接 %s 失败: %v", service, addr, err)
 				tmp := results[service]
