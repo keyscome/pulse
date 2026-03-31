@@ -5,6 +5,7 @@ A lightweight, cross-platform CLI tool for monitoring network service connectivi
 ## Features
 
 - **TCP connectivity checks** — verifies reachability of any TCP endpoint within a configurable timeout
+- **Nacos cluster checks** — connects to each Nacos node via the HTTP login API with username/password credentials
 - **MinIO authenticated checks** — connects to MinIO with username/password credentials using the MinIO Go SDK
 - **YAML-based configuration** — define services and their addresses in a simple `config.yml` file
 - **Structured logging** — separate log files for successes, failures, and the full report, written to a timestamped directory under `logs/`
@@ -51,6 +52,7 @@ The script downloads the latest release, extracts it to `/usr/local/pulse`, and 
 Pulse reads a `config.yml` file from the **current working directory**. The file has the following sections:
 
 - **`services`** — a map of service names to lists of `host:port` addresses for TCP connectivity checks
+- **`nacos`** — Nacos-specific configuration with cluster addresses and credentials for HTTP login checks
 - **`elasticsearch`** — Elasticsearch-specific configuration with credentials for authenticated HTTP health checks
 - **`kibana`** — Kibana-specific configuration with credentials for authenticated HTTP status checks
 - **`redis`** — Redis-specific configuration with optional password for protocol-level checks
@@ -61,14 +63,20 @@ Pulse reads a `config.yml` file from the **current working directory**. The file
 services:
   web:
     - 10.0.31.131:30310
-  nacos:
-    - 10.0.31.131:30848
   kafka:
     - 10.0.1.30:9092
   zookeeper:
     - 10.0.1.27:2181,10.0.1.28:2181,10.0.1.29:2181
   zk-ui:
     - 10.0.1.27:9090
+
+nacos:
+  addresses:
+    - 10.0.31.131:8848
+    - 10.0.31.132:8848
+    - 10.0.31.133:8848
+  username: nacos
+  password: nacos
 
 elasticsearch:
   addresses:
@@ -97,9 +105,11 @@ minio:
     - 10.0.1.35:9000
 ```
 
+**Nacos** connects to each cluster node via the HTTP login API (`POST /nacos/v1/auth/login`), verifying both network reachability and authentication credentials.
+
 **Elasticsearch** connects via the HTTP API (`/_cluster/health`) and supports Basic Auth. `username` and `password` are optional — omit them for clusters with security disabled.
 
-Add or remove services under `services` as needed — any service name is accepted. The `elasticsearch`, `kibana`, `redis`, and `minio` sections are optional; omit them if not needed.
+Add or remove services under `services` as needed — any service name is accepted. The `nacos`, `elasticsearch`, `kibana`, `redis`, and `minio` sections are optional; omit them if not needed.
 
 ## Usage
 
@@ -113,10 +123,11 @@ Pulse will:
 
 1. Load `config.yml`.
 2. Attempt a TCP connection to every address under `services` (3-second timeout per address).
-3. Check the Elasticsearch cluster health via HTTP API using optional Basic Auth credentials.
-4. Attempt an authenticated connection to every MinIO address using the provided `username` and `password`.
-5. Print a report to standard output.
-6. Write detailed logs to `logs/<timestamp>/`.
+3. Check each Nacos cluster node via the HTTP login API using the provided credentials.
+4. Check the Elasticsearch cluster health via HTTP API using optional Basic Auth credentials.
+5. Attempt an authenticated connection to every MinIO address using the provided `username` and `password`.
+6. Print a report to standard output.
+7. Write detailed logs to `logs/<timestamp>/`.
 
 ### Example output
 
@@ -231,6 +242,7 @@ pulse/
 ├── checker/        # TCP and Elasticsearch connection checker package
 ├── config/         # YAML configuration loader package
 ├── logger/         # Structured logger (success / failure / report)
+├── nacos/          # Nacos cluster HTTP authentication checker package
 ├── scripts/        # Installation script
 ├── config.yml      # Example service configuration
 ├── go.mod          # Go module definition

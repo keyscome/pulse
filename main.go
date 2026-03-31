@@ -12,6 +12,7 @@ import (
 	"github.com/keyscome/pulse/config"
 	"github.com/keyscome/pulse/kafka"
 	"github.com/keyscome/pulse/logger"
+	"github.com/keyscome/pulse/nacos"
 )
 
 // ServiceKafka is the config key that selects the Kafka protocol-level checker.
@@ -125,6 +126,15 @@ func main() {
 		for _, addr := range cfg.Kibana.Addresses {
 			err := checker.CheckKibanaConnection(addr, cfg.Kibana.Username, cfg.Kibana.Password, timeout)
 			recordResult(results, "kibana", addr, err, successLogger, failureLogger)
+		}
+	}
+
+	// ── Nacos 集群（HTTP 登录接口 + 用户名/密码认证）────────────────────
+	if cfg.Nacos != nil && len(cfg.Nacos.Addresses) > 0 {
+		results["nacos"] = ServiceResult{Success: []string{}, Failure: []string{}}
+		for _, addr := range cfg.Nacos.Addresses {
+			err := nacos.CheckAuth(addr, cfg.Nacos.Username, cfg.Nacos.Password, timeout)
+			recordResult(results, "nacos", addr, err, successLogger, failureLogger)
 		}
 	}
 

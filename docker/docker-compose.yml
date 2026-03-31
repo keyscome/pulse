@@ -29,7 +29,11 @@ services:
       JVM_XMS: 256m
       JVM_XMX: 256m
       JVM_XMN: 128m
-      NACOS_AUTH_ENABLE: "false"
+      NACOS_AUTH_ENABLE: "true"
+      # Secret key is used for local development only – change this value in production deployments.
+      NACOS_AUTH_TOKEN_SECRET_KEY: "SecretKey012345678901234567890123456789012345678901234567890123456789"
+      NACOS_AUTH_IDENTITY_KEY: "nacos"
+      NACOS_AUTH_IDENTITY_VALUE: "nacos"
     ports:
       - "8848:8848"   # HTTP console & client API
       - "9848:9848"   # gRPC client port

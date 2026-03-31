@@ -6,9 +6,6 @@
 # All addresses resolve to localhost via the ports exposed by docker-compose.
 
 services:
-  nacos:
-    - localhost:8848
-
   zookeeper:
     - localhost:2181
 
@@ -17,6 +14,12 @@ services:
 
   kafka:
     - localhost:9092
+
+nacos:
+  addresses:
+    - localhost:8848
+  username: nacos
+  password: nacos
 
 redis:
   password: ""

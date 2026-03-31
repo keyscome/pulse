@@ -10,6 +10,13 @@ import (
 // NetworkConfig 定义了各个服务的地址列表，键为服务名称，值为字符串数组
 type NetworkConfig map[string][]string
 
+// NacosConfig 保存 Nacos 集群连接配置，包括节点地址列表和认证凭据
+type NacosConfig struct {
+	Addresses []string `yaml:"addresses"`
+	Username  string   `yaml:"username"`
+	Password  string   `yaml:"password"`
+}
+
 // ElasticsearchConfig 保存 Elasticsearch 集群的连接参数
 type ElasticsearchConfig struct {
 	Addresses []string `yaml:"addresses"`
@@ -39,9 +46,10 @@ type RedisConfig struct {
 	Addresses []string `yaml:"addresses"`
 }
 
-// AppConfig 顶层配置结构，包含通用 TCP 服务、MinIO、Kibana、Redis 和 Elasticsearch 专项配置
+// AppConfig 顶层配置结构，包含通用 TCP 服务、Nacos、MinIO、Kibana、Redis 和 Elasticsearch 专项配置
 type AppConfig struct {
 	Services      NetworkConfig        `yaml:"services"`
+	Nacos         *NacosConfig         `yaml:"nacos"`
 	Minio         *MinioConfig         `yaml:"minio"`
 	Kibana        KibanaConfig         `yaml:"kibana"`
 	Redis         RedisConfig          `yaml:"redis"`
