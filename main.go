@@ -61,7 +61,16 @@ func main() {
 	// 设置检测超时时间
 	timeout := 3 * time.Second
 
-	// 遍历配置中的每个服务类型及其地址列表（TCP 连接检测）
+	// ── Redis（支持密码认证）──────────────────────────────────────────────
+	if len(cfg.Redis.Addresses) > 0 && !(len(cfg.Redis.Addresses) == 1 && cfg.Redis.Addresses[0] == "") {
+		results["redis"] = ServiceResult{Success: []string{}, Failure: []string{}}
+		for _, addr := range cfg.Redis.Addresses {
+			err := checker.CheckRedisConnection(addr, cfg.Redis.Password, timeout)
+			recordResult(results, "redis", addr, err, successLogger, failureLogger)
+		}
+	}
+
+	// ── 通用 TCP 服务检测（zookeeper 使用专用检测器）────────────────────
 	for service, addresses := range cfg.Services {
 		results[service] = ServiceResult{Success: []string{}, Failure: []string{}}
 
@@ -71,7 +80,6 @@ func main() {
 		}
 
 		for _, addr := range addresses {
-			// 检测连接：zookeeper 使用专用检测器（ruok/imok 四字命令），其余服务使用 TCP 检测
 			var connErr error
 			if service == "zookeeper" {
 				connErr = checker.CheckZookeeperConnection(addr, timeout)
@@ -82,10 +90,9 @@ func main() {
 		}
 	}
 
-	// MinIO 认证连接检测
+	// ── MinIO 认证连接检测 ────────────────────────────────────────────────
 	if cfg.Minio != nil {
 		results["minio"] = ServiceResult{Success: []string{}, Failure: []string{}}
-
 		for _, addr := range cfg.Minio.Addresses {
 			if addr == "" {
 				continue
@@ -95,34 +102,12 @@ func main() {
 		}
 	}
 
-	// 检测 Kibana（HTTP 基础认证）
+	// ── Kibana（HTTP 基础认证）────────────────────────────────────────────
 	if len(cfg.Kibana.Addresses) > 0 {
 		results["kibana"] = ServiceResult{Success: []string{}, Failure: []string{}}
 		for _, addr := range cfg.Kibana.Addresses {
 			err := checker.CheckKibanaConnection(addr, cfg.Kibana.Username, cfg.Kibana.Password, timeout)
 			recordResult(results, "kibana", addr, err, successLogger, failureLogger)
-		}
-	}
-
-	// 检测 Kibana（HTTP 基础认证）
-	if len(cfg.Kibana.Addresses) > 0 {
-		results["kibana"] = ServiceResult{
-			Success: []string{},
-			Failure: []string{},
-		}
-		for _, addr := range cfg.Kibana.Addresses {
-			err := checker.CheckKibanaConnection(addr, cfg.Kibana.Username, cfg.Kibana.Password, timeout)
-			if err != nil {
-				failureLogger.Printf("[kibana] 连接 %s 失败: %v", addr, err)
-				tmp := results["kibana"]
-				tmp.Failure = append(tmp.Failure, addr)
-				results["kibana"] = tmp
-			} else {
-				successLogger.Printf("[kibana] 连接 %s 成功", addr)
-				tmp := results["kibana"]
-				tmp.Success = append(tmp.Success, addr)
-				results["kibana"] = tmp
-			}
 		}
 	}
 

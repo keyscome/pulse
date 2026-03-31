@@ -9,9 +9,6 @@ services:
   nacos:
     - localhost:8848
 
-  redis:
-    - localhost:6379
-
   zookeeper:
     - localhost:2181
 
@@ -23,6 +20,11 @@ services:
 
   elasticsearch:
     - localhost:9300
+
+redis:
+  password: ""
+  addresses:
+    - localhost:6379
 
 kibana:
   addresses:
