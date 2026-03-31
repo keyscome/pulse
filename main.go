@@ -10,8 +10,12 @@ import (
 
 	"github.com/keyscome/pulse/checker"
 	"github.com/keyscome/pulse/config"
+	"github.com/keyscome/pulse/kafka"
 	"github.com/keyscome/pulse/logger"
 )
+
+// ServiceKafka is the config key that selects the Kafka protocol-level checker.
+const ServiceKafka = "kafka"
 
 // ReportData 用于模板渲染，记录每个服务检测的成功和失败结果
 type ReportData struct {
@@ -80,10 +84,14 @@ func main() {
 		}
 
 		for _, addr := range addresses {
+			// 检测连接：kafka/zookeeper 使用各自专用检测器，其余使用通用 TCP 检测
 			var connErr error
-			if service == "zookeeper" {
+			switch service {
+			case ServiceKafka:
+				connErr = kafka.CheckConnection(addr, timeout)
+			case "zookeeper":
 				connErr = checker.CheckZookeeperConnection(addr, timeout)
-			} else {
+			default:
 				connErr = checker.CheckConnection(addr, timeout)
 			}
 			recordResult(results, service, addr, connErr, successLogger, failureLogger)
