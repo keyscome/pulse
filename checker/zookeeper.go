@@ -8,7 +8,6 @@ import (
 	"time"
 )
 
-
 // CheckZookeeperConnection 验证 Zookeeper 节点的连通性，使用 Zookeeper 四字命令 "ruok"。
 // connectString 可以是单个 "host:port"，也可以是标准 Zookeeper 连接字符串，
 // 例如 "host1:2181,host2:2181,host3:2181" 或 "host1:2181,host2:2181/chroot"。
